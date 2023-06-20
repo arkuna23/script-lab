@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HTUSubjectHacker
 // @namespace    https://bbs.tampermonkey.net.cn/
-// @version      0.1.0
+// @version      0.1.1
 // @description  校领导密麻麻石蜡
 // @author       Naraku_Night
 // @match        *://jwc.htu.edu.cn/new/student/xsxk/xklx/*
@@ -21,16 +21,28 @@
             Object.assign(selectIdAndName, JSON.parse(s));
     }
     
-    const hackerLog = (obj = '') => {
+    let _cacheLog = '';
+    let _lastLog = '';
+
+    const hackerLog = (obj = '', append = false) => {
         let text = '';
         if (localStorage.getItem('hacking') != null) {
             text += "抢课中...\n"
             text += "剩余课程: " + Object.values(selectIdAndName).map(obj => obj.show).join(', ') + '\n';
         }
-        text += obj;
+        if (append) {
+            _cacheLog += obj + '\n';
+            text += _cacheLog + _lastLog;
+        } else {
+            _lastLog = obj;
+            text += _cacheLog + obj;
+        }
 
-        localStorage.setItem("hacker_log", obj);
-        logOutput.innerHTML = text;
+        if (text != logOutput.innerHTML) {
+            localStorage.setItem('hacker_log', obj);
+            localStorage.setItem('hacker_log_c', _cacheLog);
+            logOutput.innerHTML = text;
+        }
     }
 
     // 输出文本框
@@ -40,8 +52,10 @@
         logOutput.style = "width: 100%;height: 150px;margin-top: 5px;white-space:pre-line;"
         logOutput.readOnly = true;
 
-        if (localStorage.getItem('hacking') != null)
-            hackerLog(localStorage.getItem('hacker_log'));
+        if (localStorage.getItem('hacking') != null) {
+            _cacheLog = localStorage.getItem('hacker_log_c');
+            logOutput.innerHTML += _cacheLog + '\n' + localStorage.getItem('hacker_log');
+        }
     }
 
     // 抢课逻辑
@@ -56,7 +70,6 @@
                 $("#stop-btn").attr("disabled", true);
                 $("#times-input").attr("disabled", false);
                 stopHack("无剩余课程，结束抢课")
-                $(".subject-check").attr("disabled", false);
                 return;
             }
 
@@ -76,11 +89,11 @@
                         if (localStorage.getItem('hacking') == null)
                             return;
 
-                        if (response.code < 0){
+                        if (response.code == -1){
                             hackerLog(`选课 ${entry[1].show}(${entry[0]})时发生错误: ${response.message}`);
                         } else {
-                            hackerLog(`抢课成功: ${entry[1].show}`)
-                            cacheSelectedSub.add(entry[0]);
+                            hackerLog(`抢课成功: ${entry[1].show}`, true);
+                            cacheSelectedSub.push(entry[0]);
                             delete selectIdAndName[entry[0]];
                             localStorage.setItem('select', JSON.stringify(selectIdAndName));
                         }
@@ -92,14 +105,15 @@
             }
         }, 1000 / (localStorage.getItem('times') / Object.keys(selectIdAndName).length));
     }
-    const stopHack = (log = '') => {
+    const stopHack = (log = undefined) => {
+        // TODO: 优化log形参的输入
         localStorage.removeItem('hacking');
         clearInterval(interval);
         $(".subject-check").attr("disabled", false);
         for (let key of cacheSelectedSub) {
             $("#sub-" + key).attr("disabled", true);
         }
-        hackerLog(log);
+        hackerLog(log == undefined ? _lastLog : log);
     }
     // 生成窗口
     const spawnPopWindow = () => {
