@@ -14,16 +14,28 @@
     const projId = window.location.href.split('/').pop().replace('#', '');
 
     // 记录选中的课程
-    const selectIdAndName = {};
-    {
-        let s = localStorage.getItem('select');
-        if (s != null)
-            Object.assign(selectIdAndName, JSON.parse(s));
-    }
+    let _s = localStorage.getItem('select')
+    const selectIdAndName = _s == null ? {} : JSON.parse(_s);
     
-    let _cacheLog = '';
-    let _lastLog = '';
+    let cacheLog = '';
+    let lastLog = '';
 
+    // 输出文本框
+    const logOutput = (() => {
+        let d = document.createElement('textarea')
+        d.id = "log-output";
+        d.style = "width: 100%;height: 150px;margin-top: 5px;white-space:pre-line;"
+        d.readOnly = true;
+
+        if (localStorage.getItem('hacking') != null) {
+            cacheLog = localStorage.getItem('hacker_log_c');
+            d.innerHTML += cacheLog + localStorage.getItem('hacker_log');
+        }
+
+        return d
+    })()
+
+    // func
     const hackerLog = (obj = '', append = false) => {
         let text = '';
         if (localStorage.getItem('hacking') != null) {
@@ -31,30 +43,17 @@
             text += "剩余课程: " + Object.values(selectIdAndName).map(obj => obj.show).join(', ') + '\n';
         }
         if (append) {
-            _cacheLog += obj + '\n';
-            text += _cacheLog + _lastLog;
+            cacheLog += obj + '\n';
+            text += cacheLog + lastLog;
         } else {
-            _lastLog = obj;
-            text += _cacheLog + obj;
+            lastLog = obj;
+            text += cacheLog + obj;
         }
 
         if (text != logOutput.innerHTML) {
             localStorage.setItem('hacker_log', obj);
-            localStorage.setItem('hacker_log_c', _cacheLog);
+            localStorage.setItem('hacker_log_c', cacheLog);
             logOutput.innerHTML = text;
-        }
-    }
-
-    // 输出文本框
-    const logOutput = document.createElement('textarea');
-    {
-        logOutput.id = "log-output";
-        logOutput.style = "width: 100%;height: 150px;margin-top: 5px;white-space:pre-line;"
-        logOutput.readOnly = true;
-
-        if (localStorage.getItem('hacking') != null) {
-            _cacheLog = localStorage.getItem('hacker_log_c');
-            logOutput.innerHTML += _cacheLog + '\n' + localStorage.getItem('hacker_log');
         }
     }
 
@@ -113,14 +112,14 @@
         for (let key of cacheSelectedSub) {
             $("#sub-" + key).attr("disabled", true);
         }
-        hackerLog(log == undefined ? _lastLog : log);
+        hackerLog(log == undefined ? lastLog : log);
     }
     // 生成窗口
-    const spawnPopWindow = () => {
+    const spawnWindow = () => {
         console.log("生成窗口");
-        let pop = document.createElement("div");
-        pop.id = "hacker-window";
-        pop.style = "margin: 10px;"
+        let window = document.createElement("div");
+        window.id = "hacker-window";
+        window.style = "margin: 10px;"
 
         // 按钮
         let begin = document.createElement('button');
@@ -177,8 +176,8 @@
             stopHack();
         };
 
-        pop.append(topDiv, logOutput);
-        $(".layout-panel-west .datagrid-view2 .datagrid-body").append(pop);
+        window.append(topDiv, logOutput);
+        $(".layout-panel-west .datagrid-view2 .datagrid-body").append(window);
     }
 
     // 抢课选项复选框
@@ -217,7 +216,7 @@
                     let resp = this.responseText;
                     setTimeout(() => {
                         let data = JSON.parse(resp).rows;
-                        spawnPopWindow();
+                        spawnWindow();
                         for(let i=0; i< data.length; i++){
                             let id = data[i].kcrwdm, name = data[i].kcmc, show = data[i].jxbmc;
                             // 插入复选框
